@@ -2,11 +2,51 @@
 """Desktop app: PC audio -> Phone -> Bluetooth earphones."""
 import json
 import os
+import socket
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
 
 import server
+
+SINGLE_INSTANCE_PORT = 18079
+_mutex_socket = None
+
+
+def acquire_single_instance():
+    """Hold a localhost socket as a single-instance lock.
+
+    The OS releases it automatically if the process dies, so a crash
+    can never leave a stale lock behind.
+    """
+    global _mutex_socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", SINGLE_INSTANCE_PORT))
+    except OSError:
+        try:
+            s.close()
+        except Exception:
+            pass
+        return False
+    _mutex_socket = s
+    return True
+
+
+def focus_existing_window():
+    """Restore and bring the already-running app window forward."""
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = user32.FindWindowW(None, "PC-Phone-Audio")
+        if hwnd:
+            user32.ShowWindow(hwnd, 9)
+            user32.SetForegroundWindow(hwnd)
+            return True
+    except Exception:
+        pass
+    return False
 
 CONFIG_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "PCPhoneAudio")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "settings.json")
@@ -38,7 +78,8 @@ S = {
 "start": "تشغيل", "stop": "إيقاف", "running": "● يعمل", "stopped": "○ متوقف",
 "clients": "هواتف متصلة", "audio": "الصوت", "audio_wait": "بانتظار الالتقاط…",
 "theme": "داكن", "theme_l": "فاتح", "footer": "إغلاق النافذة يوقف التطبيق",
-"mode_note": "من الهاتف: مباشر للشاشة المضيئة، خلفية مع قفل الشاشة"},
+"mode_note": "من الهاتف: مباشر للشاشة المضيئة، خلفية مع قفل الشاشة",
+"port_busy": "المنفذ مشغول — أغلق أي نسخة أخرى ثم أعد التشغيل"},
 "en": {"title": "PC Audio to Phone", "sub": "Hear your PC on the Bluetooth earphones paired with your phone.",
 "step1t": "Same Wi-Fi", "step1d": "Phone and PC on the same network",
 "step2t": "Pair the buds", "step2d": "Bluetooth earphones paired with the phone",
@@ -47,7 +88,8 @@ S = {
 "start": "Start", "stop": "Stop", "running": "● Running", "stopped": "○ Stopped",
 "clients": "Connected phones", "audio": "Audio", "audio_wait": "Waiting for capture…",
 "theme": "Dark", "theme_l": "Light", "footer": "Closing the window stops the app",
-"mode_note": "On the phone: Instant for screen-on, Background with locked screen"},
+"mode_note": "On the phone: Instant for screen-on, Background with locked screen",
+"port_busy": "Port busy — close any other copy, then restart"},
 "fr": {"title": "Audio du PC vers le téléphone", "sub": "Écoutez votre PC sur les écouteurs Bluetooth associés à votre téléphone.",
 "step1t": "Même Wi-Fi", "step1d": "Téléphone et PC sur le même réseau",
 "step2t": "Associez les écouteurs", "step2d": "Écouteurs Bluetooth associés au téléphone",
@@ -56,7 +98,8 @@ S = {
 "start": "Démarrer", "stop": "Arrêter", "running": "● En cours", "stopped": "○ Arrêté",
 "clients": "Téléphones connectés", "audio": "Audio", "audio_wait": "En attente de capture…",
 "theme": "Sombre", "theme_l": "Clair", "footer": "Fermer la fenêtre arrête l'application",
-"mode_note": "Sur le téléphone : Direct écran allumé, Arrière-plan écran verrouillé"},
+"mode_note": "Sur le téléphone : Direct écran allumé, Arrière-plan écran verrouillé",
+"port_busy": "Port occupé — fermez toute autre copie, puis relancez"},
 "es": {"title": "Audio del PC al teléfono", "sub": "Escucha tu PC en los auriculares Bluetooth vinculados a tu teléfono.",
 "step1t": "Mismo Wi-Fi", "step1d": "Teléfono y PC en la misma red",
 "step2t": "Vincula los auriculares", "step2d": "Auriculares Bluetooth vinculados al teléfono",
@@ -65,7 +108,8 @@ S = {
 "start": "Iniciar", "stop": "Detener", "running": "● En curso", "stopped": "○ Detenido",
 "clients": "Teléfonos conectados", "audio": "Audio", "audio_wait": "Esperando captura…",
 "theme": "Oscuro", "theme_l": "Claro", "footer": "Cerrar la ventana detiene la aplicación",
-"mode_note": "En el teléfono: Directo con pantalla encendida, Fondo con pantalla bloqueada"},
+"mode_note": "En el teléfono: Directo con pantalla encendida, Fondo con pantalla bloqueada",
+"port_busy": "Puerto ocupado — cierra otra copia y reinicia"},
 }
 
 THEMES = {
@@ -80,6 +124,7 @@ LANGS = [("العربية", "ar"), ("English", "en"), ("Français", "fr"), ("Esp
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.title("PC-Phone-Audio")
         settings = load_settings()
         self.lang = settings.get("lang") if settings.get("lang") in S else None
         self.theme = settings.get("theme", "dark")
@@ -340,6 +385,18 @@ class App(tk.Tk):
         self._show_qr()
         self.refresh_status()
         self._tick()
+        self.after(2500, self._check_server_error)
+
+    def _check_server_error(self):
+        try:
+            if self._closed or not self.running:
+                return
+            err = getattr(server, "last_error", None)
+            if err:
+                msg = self.t("port_busy") if err == "busy" else str(err)
+                self.status.configure(text="! " + msg, bg="#3a0f0f", fg="#f87171")
+        except Exception:
+            pass
 
     def _show_qr(self):
         try:
@@ -352,10 +409,13 @@ class App(tk.Tk):
             self.qr_l.configure(text="QR —")
 
     def _tick(self):
-        if self._closed or not self.running:
-            return
-        self.refresh_counts()
-        self.after(2000, self._tick)
+        try:
+            if self._closed or not self.running:
+                return
+            self.refresh_counts()
+            self.after(2000, self._tick)
+        except Exception:
+            pass
 
     def on_toggle(self):
         if self.running:
@@ -382,4 +442,18 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
+    if not acquire_single_instance():
+        focus_existing_window()
+        try:
+            lang = load_settings().get("lang", "")
+            msg = {
+                "ar": "التطبيق يعمل بالفعل — تم إظهاره أمامك.",
+                "en": "The app is already running — brought to front.",
+                "fr": "L'application est déjà ouverte.",
+                "es": "La aplicación ya está abierta.",
+            }.get(lang, "The app is already running — brought to front.")
+            messagebox.showinfo("PC-Phone-Audio", msg)
+        except Exception:
+            pass
+        sys.exit(0)
     App().mainloop()

@@ -80,6 +80,7 @@ clients_queues_lock = threading.Lock()
 connected_count = 0
 connected_lock = threading.Lock()
 main_loop = None
+last_error = None
 
 # ---------- Background control (for the desktop GUI) ----------
 stop_flag = threading.Event()
@@ -429,9 +430,24 @@ class Handler(BaseHTTPRequestHandler):
             with mp3_queues_lock:
                 mp3_queues.discard(q)
 
+def _is_busy(e):
+    """True when an OSError means 'address already in use' on any platform."""
+    if getattr(e, "errno", None) in (98, 10048):
+        return True
+    if getattr(e, "winerror", None) == 10048:
+        return True
+    msg = str(e).lower()
+    return "in use" in msg or "only one usage" in msg
+
+
 def run_http():
-    global http_server
-    http_server = ThreadingHTTPServer(("0.0.0.0", HTTP_PORT), Handler)
+    global http_server, last_error
+    try:
+        http_server = ThreadingHTTPServer(("0.0.0.0", HTTP_PORT), Handler)
+    except OSError as e:
+        last_error = "busy" if _is_busy(e) else str(e)
+        print(f"[error] HTTP server failed: {e}")
+        return
     print(f"[http] Listening on port {HTTP_PORT}")
     try:
         http_server.serve_forever()
@@ -662,12 +678,15 @@ async def run_ws():
         await _ws_stop_async.wait()
 
 def _ws_thread_fn():
-    global main_loop
+    global main_loop, last_error
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     main_loop = loop
     try:
         loop.run_until_complete(run_ws())
+    except OSError as e:
+        last_error = "busy" if _is_busy(e) else str(e)
+        print(f"[error] WS server failed: {e}")
     except Exception:
         pass
     finally:
@@ -678,6 +697,8 @@ def _ws_thread_fn():
 
 def start_background(open_browser=False):
     """Run the server on background threads (for the GUI or the CLI)."""
+    global last_error
+    last_error = None
     stop_flag.clear()
     build_qr()
     threading.Thread(target=run_http, daemon=True).start()
