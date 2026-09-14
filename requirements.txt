@@ -1,0 +1,5 @@
+pyaudiowpatch
+websockets
+qrcode
+pillow
+lameenc
