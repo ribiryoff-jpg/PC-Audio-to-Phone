@@ -243,7 +243,7 @@ if(params.get('code')){$('code').value=params.get('code');}
 const isPC=['localhost','127.0.0.1'].includes(location.hostname);
 if(isPC){$('playerBox').style.display='none';$('pcBox').style.display='block';loadPC();}
 const WS_PORT=__WS_PORT__;
-let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null,lastArr=0,jitA=0;
+let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null,lastArr=0,jitA=0,jbTarget=0.08,underRuns=0,lastAdapt=0;
 function setMode(m){mode=m;stopAll();
  $('mFast').classList.toggle('sel',m==='fast');
  $('mBg').classList.toggle('sel',m==='bg');
@@ -298,10 +298,11 @@ $('btnStart').onclick=async()=>{
    const src=ctx.createBufferSource();src.buffer=buf;src.connect(gain);
    const nowA=ctx.currentTime;
    const buffered=nextTime-nowA;
-   if(buffered<0)nextTime=nowA+0.09;
-   else if(buffered>0.6)nextTime=nowA+0.18;
+   if(buffered<0){nextTime=nowA+Math.min(jbTarget,0.12);underRuns++;jbTarget=Math.min(0.35,0.08+underRuns*0.03);}
+   else if(buffered>0.35)nextTime=nowA+Math.min(jbTarget,0.12);
    src.start(nextTime);nextTime+=buf.duration;
    const tA=performance.now();
+   if(tA-lastAdapt>5000){lastAdapt=tA;if(underRuns>0){underRuns--;jbTarget=Math.max(0.08,0.08+underRuns*0.03);}}
    if(lastArr){const dev=Math.abs((tA-lastArr)-20);jitA=jitA*0.9+dev*0.1;}
    lastArr=tA;
    $('netq').textContent=jitA.toFixed(0)+' ms';
@@ -316,7 +317,7 @@ function startCtx(){
  if(ctx)try{ctx.close()}catch(e){}
  ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:helloRate,latencyHint:'interactive'});
  gain=ctx.createGain();gain.gain.value=$('vol').value/100;gain.connect(ctx.destination);
- ctx.resume();nextTime=ctx.currentTime+0.06;running=true;chunkCount=0;lastArr=0;jitA=0;keepAwake();
+ ctx.resume();nextTime=ctx.currentTime+0.06;running=true;chunkCount=0;lastArr=0;jitA=0;jbTarget=0.08;underRuns=0;lastAdapt=0;keepAwake();
  $('btnStart').disabled=true;setStatus(t('fast_ready'),'ok');
 }
 function stopAll(){running=false;try{ws&&ws.close()}catch(e){}ws=null;try{ctx&&ctx.close()}catch(e){}ctx=null;
