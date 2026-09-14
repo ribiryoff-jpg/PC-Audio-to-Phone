@@ -26,6 +26,8 @@ earphones. Everything stays inside your home network.
   auto-detect on the phone page
 - **Zero-install desktop app**: single `PC-Phone-Audio.exe` (~35MB),
   no Python required
+- **Lightweight**: ~1% CPU idle; the MP3 encoder only runs while
+  Background mode is actually in use
 - **Single instance**: opening the app twice just brings its window forward;
   a busy port shows a clear error instead of failing silently
 - **No Bluetooth permissions needed** in the browser — pairing the earphones

@@ -485,13 +485,16 @@ def mp3_push(pcm: bytes, rate: int, ch: int):
     global mp3_encoder, mp3_enc_params
     if not MP3_AVAILABLE or not pcm:
         return
+    with mp3_queues_lock:
+        if not mp3_queues:
+            return
     try:
         if mp3_encoder is None or mp3_enc_params != (rate, ch):
             enc = lameenc.Encoder()
             enc.set_bit_rate(128)
             enc.set_in_sample_rate(rate)
             enc.set_channels(ch)
-            enc.set_quality(2)
+            enc.set_quality(5)
             mp3_encoder = enc
             mp3_enc_params = (rate, ch)
         data = mp3_encoder.encode(pcm)
@@ -573,8 +576,15 @@ def capture_loop():
         try:
             while not stop_flag.is_set():
                 try:
+                    # Poll instead of blocking: idle devices deliver no
+                    # packets, and a blocked read would ignore stop requests
+                    # and pile up stale threads across restarts.
+                    if stream.get_read_available() < 960:
+                        time.sleep(0.005)
+                        continue
                     data = stream.read(960, exception_on_overflow=False)
                 except Exception:
+                    time.sleep(0.02)
                     continue
                 if MONO and ch == 2:
                     # Fast stereo-to-mono downmix
