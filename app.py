@@ -112,7 +112,14 @@ class App(tk.Tk):
         d.title("Language")
         d.geometry("320x320")
         d.resizable(False, False)
-        d.transient(self)
+        # NOTE: no transient() here — a transient of a withdrawn master
+        # stays invisible on Windows and would block the app forever.
+        d.attributes("-topmost", True)
+        try:
+            sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+            d.geometry(f"320x320+{(sw - 320) // 2}+{(sh - 320) // 2}")
+        except Exception:
+            pass
         p = self.pal()
         d.configure(bg=p["bg"])
         tk.Label(d, text="Choose language", font=("Segoe UI", 13, "bold"),
@@ -129,6 +136,12 @@ class App(tk.Tk):
         d.grab_set()
         self.wait_window(d)
         self.deiconify()
+        try:
+            self.lift()
+            self.attributes("-topmost", True)
+            self.after(1500, lambda: self.attributes("-topmost", False) if not self._closed else None)
+        except Exception:
+            pass
 
     def _choose_first_lang(self, dialog, code):
         self.lang = code
