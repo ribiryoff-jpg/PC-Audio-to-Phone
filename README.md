@@ -93,7 +93,7 @@ Options: `python server.py --test` (network test tone), `--mono`
 |---|---|
 | No sound on the phone | Same Wi-Fi on both; VPN off; press Play; nothing muted; try Chrome |
 | Page won't open on the phone | Same Wi-Fi; allow Python/app in the firewall (private); disable VPN |
-| Stuttering | Move closer to the router; close downloads; try `--mono` |
+| Stuttering | Move closer to the router; use the 5GHz band, not 2.4GHz; pause downloads; try `--mono` |
 | 0.1–0.2s delay | Normal for network audio; fine for films/music, not for competitive games |
 | Stops on screen lock | Use **Background** mode before locking |
 | Aggressive battery saver kills it | Exempt Chrome from battery optimization |

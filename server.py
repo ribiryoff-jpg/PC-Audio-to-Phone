@@ -198,8 +198,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--text);outline-o
 <label class="lbl" data-i="volume"></label>
 <input type="range" id="vol" min="0" max="100" value="100">
 <div class="row"><span data-i="latency"></span><b id="lat">—</b></div>
+<div class="row"><span data-i="net"></span><b id="netq">—</b></div>
 <div class="row"><span data-i="state"></span><b id="st"></b></div>
-<div class="tips"><div data-i="tip_bt"></div><div data-i="tip_vol"></div></div>
+<div class="tips"><div data-i="tip_bt"></div><div data-i="tip_vol"></div><div data-i="tip_net"></div></div>
 </div>
 
 <div class="card" id="pcBox">
@@ -216,10 +217,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--text);outline-o
 <script>
 const $=id=>document.getElementById(id);
 const S={
-ar:{title:"صوت الحاسوب إلى الهاتف",subtitle:"استمع لصوت حاسوبك من سماعات البلوتوث المربوطة بهاتفك.",step1t:"نفس الواي فاي",step1d:"الهاتف والحاسوب على نفس الشبكة",step2t:"اربط السماعات",step2d:"البلوتوث مربوط بالهاتف",step3t:"أدخل الرمز وشغّل",step3d:"امسح QR ثم اضغط تشغيل",waiting:"○ بانتظار التشغيل…",connecting:"…جارٍ الاتصال",connected_wait:"متصل — بانتظار الصوت",running:"● يعمل الآن — الصوت في سماعاتك",stopped_hint:"متوقف. اضغط تشغيل للعودة.",locked_hint:"! الشاشة مقفلة؟ بدّل إلى وضع الخلفية",back_hint:"عُدت — إن توقف الصوت أعد التشغيل",conn_lost:"! انقطع الاتصال — تحقق من الواي فاي والرمز",err_conn:"! تعذر الاتصال — تأكد من نفس شبكة الواي فاي",err_code:"أدخل الرمز المكوّن من 6 أرقام",err_retry:"تعذر التشغيل — حاول مجدداً",bg_now:"● الخلفية تعمل — يمكنك قفل الشاشة",fast_ready:"تم الاتصال — شغّل أي صوت في الحاسوب",mode_fast:"مباشر",mode_fast_d:"تأخير ~0.1 ثانية",mode_bg:"خلفية",mode_bg_d:"يعمل مع قفل الشاشة",start:"▶ تشغيل الصوت",stop:"■ إيقاف",volume:"مستوى الصوت",latency:"التأخير",state:"الحالة",connected:"يعمل",disconnected:"غير متصل",bg_tag:"خلفية",connecting2:"يتصل…",sec:" ث",tip_bt:"لا حاجة لصلاحية بلوتوث في المتصفح.",tip_vol:"ارفع صوت الحاسوب والهاتف والصفحة معاً.",pctitle:"لوحة الحاسوب",pcsub:"امسح الرمز من الهاتف — نفس شبكة الواي فاي",pin_cap:"رمز الدخول (يتغير كل تشغيل)",clients:"هواتف متصلة الآن",tip_fw:"عند طلب الجدار الناري اختر الشبكات الخاصة فقط.",appoff:"شغّل التطبيق أولاً"},
-en:{title:"PC Audio to Phone",subtitle:"Hear your PC on the Bluetooth earphones paired with your phone.",step1t:"Same Wi-Fi",step1d:"Phone and PC on the same network",step2t:"Pair the buds",step2d:"Bluetooth paired with the phone",step3t:"Enter code & play",step3d:"Scan the QR, then press play",waiting:"○ Waiting to start…",connecting:"Connecting…",connected_wait:"Connected — waiting for audio",running:"● Playing — audio on your earphones",stopped_hint:"Stopped. Press play to resume.",locked_hint:"! Screen locked? Switch to Background mode",back_hint:"Welcome back — replay if silent",conn_lost:"! Disconnected — check Wi-Fi and code",err_conn:"! Can't connect — same Wi-Fi required",err_code:"Enter the 6-digit code",err_retry:"Couldn't start — try again",bg_now:"● Background on — you can lock the screen",fast_ready:"Connected — play anything on the PC",mode_fast:"Instant",mode_fast_d:"~0.1s delay",mode_bg:"Background",mode_bg_d:"Works with locked screen",start:"▶ Play audio",stop:"■ Stop",volume:"Volume",latency:"Delay",state:"Status",connected:"Playing",disconnected:"Offline",bg_tag:"Background",connecting2:"Connecting…",sec:" s",tip_bt:"No Bluetooth permission needed in the browser.",tip_vol:"Turn up PC, phone and page volume together.",pctitle:"Computer panel",pcsub:"Scan the code from your phone — same Wi-Fi",pin_cap:"Access code (new each run)",clients:"Phones connected",tip_fw:"If the firewall asks, allow private networks only.",appoff:"Start the app first"},
-fr:{title:"Audio du PC",subtitle:"Écoutez votre PC sur les écouteurs associés à votre téléphone.",step1t:"Même Wi-Fi",step1d:"Téléphone et PC sur le même réseau",step2t:"Associez les écouteurs",step2d:"Bluetooth associé au téléphone",step3t:"Code et lecture",step3d:"Scannez le QR, puis lecture",waiting:"○ En attente…",connecting:"Connexion…",connected_wait:"Connecté — en attente d'audio",running:"● Lecture — audio sur vos écouteurs",stopped_hint:"Arrêté. Appuyez sur lecture.",locked_hint:"! Écran verrouillé ? Passez en Arrière-plan",back_hint:"Bon retour — relancez si silencieux",conn_lost:"! Déconnecté — vérifiez Wi-Fi et code",err_conn:"! Connexion impossible — même Wi-Fi requis",err_code:"Saisissez le code à 6 chiffres",err_retry:"Échec — réessayez",bg_now:"● Arrière-plan actif — verrouillez l'écran",fast_ready:"Connecté — lancez un son sur le PC",mode_fast:"Direct",mode_fast_d:"Retard ~0,1 s",mode_bg:"Arrière-plan",mode_bg_d:"Écran verrouillé OK",start:"▶ Lecture",stop:"■ Arrêter",volume:"Volume",latency:"Retard",state:"État",connected:"Lecture",disconnected:"Hors ligne",bg_tag:"Arrière-plan",connecting2:"Connexion…",sec:" s",tip_bt:"Aucune autorisation Bluetooth requise.",tip_vol:"Montez PC, téléphone et page ensemble.",pctitle:"Panneau de l'ordinateur",pcsub:"Scannez depuis le téléphone — même Wi-Fi",pin_cap:"Code d'accès (nouveau à chaque fois)",clients:"Téléphones connectés",tip_fw:"Si le pare-feu demande, autorisez les réseaux privés.",appoff:"Démarrez d'abord l'application"},
-es:{title:"Audio del PC",subtitle:"Escucha tu PC en los auriculares vinculados a tu teléfono.",step1t:"Mismo Wi-Fi",step1d:"Teléfono y PC en la misma red",step2t:"Vincula los auriculares",step2d:"Bluetooth vinculado al teléfono",step3t:"Código y reproducir",step3d:"Escanea el QR y reproduce",waiting:"○ Esperando iniciar…",connecting:"Conectando…",connected_wait:"Conectado — esperando audio",running:"● Sonando — audio en tus auriculares",stopped_hint:"Detenido. Pulsa reproducir.",locked_hint:"! ¿Pantalla bloqueada? Cambia a Fondo",back_hint:"Bienvenido — repite si no hay sonido",conn_lost:"! Desconectado — revisa Wi-Fi y código",err_conn:"! Sin conexión — se requiere el mismo Wi-Fi",err_code:"Introduce el código de 6 dígitos",err_retry:"No se pudo iniciar — reintenta",bg_now:"● Fondo activo — puedes bloquear la pantalla",fast_ready:"Conectado — reproduce algo en el PC",mode_fast:"Directo",mode_fast_d:"Retardo ~0,1 s",mode_bg:"Fondo",mode_bg_d:"Funciona bloqueado",start:"▶ Reproducir",stop:"■ Detener",volume:"Volumen",latency:"Retardo",state:"Estado",connected:"Sonando",disconnected:"Desconectado",bg_tag:"Fondo",connecting2:"Conectando…",sec:" s",tip_bt:"No se necesita permiso de Bluetooth.",tip_vol:"Sube el volumen del PC, teléfono y página.",pctitle:"Panel del equipo",pcsub:"Escanea desde el teléfono — mismo Wi-Fi",pin_cap:"Código (nuevo cada vez)",clients:"Teléfonos conectados",tip_fw:"Si el firewall pregunta, permite solo redes privadas.",appoff:"Inicia primero la aplicación"}
+ar:{title:"صوت الحاسوب إلى الهاتف",subtitle:"استمع لصوت حاسوبك من سماعات البلوتوث المربوطة بهاتفك.",step1t:"نفس الواي فاي",step1d:"الهاتف والحاسوب على نفس الشبكة",step2t:"اربط السماعات",step2d:"البلوتوث مربوط بالهاتف",step3t:"أدخل الرمز وشغّل",step3d:"امسح QR ثم اضغط تشغيل",waiting:"○ بانتظار التشغيل…",connecting:"…جارٍ الاتصال",connected_wait:"متصل — بانتظار الصوت",running:"● يعمل الآن — الصوت في سماعاتك",stopped_hint:"متوقف. اضغط تشغيل للعودة.",locked_hint:"! الشاشة مقفلة؟ بدّل إلى وضع الخلفية",back_hint:"عُدت — إن توقف الصوت أعد التشغيل",conn_lost:"! انقطع الاتصال — تحقق من الواي فاي والرمز",err_conn:"! تعذر الاتصال — تأكد من نفس شبكة الواي فاي",err_code:"أدخل الرمز المكوّن من 6 أرقام",err_retry:"تعذر التشغيل — حاول مجدداً",bg_now:"● الخلفية تعمل — يمكنك قفل الشاشة",fast_ready:"تم الاتصال — شغّل أي صوت في الحاسوب",mode_fast:"مباشر",mode_fast_d:"تأخير ~0.1 ثانية",mode_bg:"خلفية",mode_bg_d:"يعمل مع قفل الشاشة",start:"▶ تشغيل الصوت",stop:"■ إيقاف",volume:"مستوى الصوت",latency:"التأخير",state:"الحالة",connected:"يعمل",disconnected:"غير متصل",bg_tag:"خلفية",connecting2:"يتصل…",sec:" ث",tip_bt:"لا حاجة لصلاحية بلوتوث في المتصفح.",tip_vol:"ارفع صوت الحاسوب والهاتف والصفحة معاً.",tip_net:"عند التقطيع: قرّب الهاتف من الراوتر واستخدم شبكة 5GHz وأوقف التحميلات.",net:"الشبكة",pctitle:"لوحة الحاسوب",pcsub:"امسح الرمز من الهاتف — نفس شبكة الواي فاي",pin_cap:"رمز الدخول (يتغير كل تشغيل)",clients:"هواتف متصلة الآن",tip_fw:"عند طلب الجدار الناري اختر الشبكات الخاصة فقط.",appoff:"شغّل التطبيق أولاً"},
+en:{title:"PC Audio to Phone",subtitle:"Hear your PC on the Bluetooth earphones paired with your phone.",step1t:"Same Wi-Fi",step1d:"Phone and PC on the same network",step2t:"Pair the buds",step2d:"Bluetooth paired with the phone",step3t:"Enter code & play",step3d:"Scan the QR, then press play",waiting:"○ Waiting to start…",connecting:"Connecting…",connected_wait:"Connected — waiting for audio",running:"● Playing — audio on your earphones",stopped_hint:"Stopped. Press play to resume.",locked_hint:"! Screen locked? Switch to Background mode",back_hint:"Welcome back — replay if silent",conn_lost:"! Disconnected — check Wi-Fi and code",err_conn:"! Can't connect — same Wi-Fi required",err_code:"Enter the 6-digit code",err_retry:"Couldn't start — try again",bg_now:"● Background on — you can lock the screen",fast_ready:"Connected — play anything on the PC",mode_fast:"Instant",mode_fast_d:"~0.1s delay",mode_bg:"Background",mode_bg_d:"Works with locked screen",start:"▶ Play audio",stop:"■ Stop",volume:"Volume",latency:"Delay",state:"Status",connected:"Playing",disconnected:"Offline",bg_tag:"Background",connecting2:"Connecting…",sec:" s",tip_bt:"No Bluetooth permission needed in the browser.",tip_vol:"Turn up PC, phone and page volume together.",tip_net:"If it stutters: move closer to the router, use 5GHz Wi-Fi, pause downloads.",net:"Network",pctitle:"Computer panel",pcsub:"Scan the code from your phone — same Wi-Fi",pin_cap:"Access code (new each run)",clients:"Phones connected",tip_fw:"If the firewall asks, allow private networks only.",appoff:"Start the app first"},
+fr:{title:"Audio du PC",subtitle:"Écoutez votre PC sur les écouteurs associés à votre téléphone.",step1t:"Même Wi-Fi",step1d:"Téléphone et PC sur le même réseau",step2t:"Associez les écouteurs",step2d:"Bluetooth associé au téléphone",step3t:"Code et lecture",step3d:"Scannez le QR, puis lecture",waiting:"○ En attente…",connecting:"Connexion…",connected_wait:"Connecté — en attente d'audio",running:"● Lecture — audio sur vos écouteurs",stopped_hint:"Arrêté. Appuyez sur lecture.",locked_hint:"! Écran verrouillé ? Passez en Arrière-plan",back_hint:"Bon retour — relancez si silencieux",conn_lost:"! Déconnecté — vérifiez Wi-Fi et code",err_conn:"! Connexion impossible — même Wi-Fi requis",err_code:"Saisissez le code à 6 chiffres",err_retry:"Échec — réessayez",bg_now:"● Arrière-plan actif — verrouillez l'écran",fast_ready:"Connecté — lancez un son sur le PC",mode_fast:"Direct",mode_fast_d:"Retard ~0,1 s",mode_bg:"Arrière-plan",mode_bg_d:"Écran verrouillé OK",start:"▶ Lecture",stop:"■ Arrêter",volume:"Volume",latency:"Retard",state:"État",connected:"Lecture",disconnected:"Hors ligne",bg_tag:"Arrière-plan",connecting2:"Connexion…",sec:" s",tip_bt:"Aucune autorisation Bluetooth requise.",tip_vol:"Montez PC, téléphone et page ensemble.",tip_net:"En cas de saccades : rapprochez le téléphone du routeur, Wi-Fi 5 GHz, pausez les téléchargements.",net:"Réseau",pctitle:"Panneau de l'ordinateur",pcsub:"Scannez depuis le téléphone — même Wi-Fi",pin_cap:"Code d'accès (nouveau à chaque fois)",clients:"Téléphones connectés",tip_fw:"Si le pare-feu demande, autorisez les réseaux privés.",appoff:"Démarrez d'abord l'application"},
+es:{title:"Audio del PC",subtitle:"Escucha tu PC en los auriculares vinculados a tu teléfono.",step1t:"Mismo Wi-Fi",step1d:"Teléfono y PC en la misma red",step2t:"Vincula los auriculares",step2d:"Bluetooth vinculado al teléfono",step3t:"Código y reproducir",step3d:"Escanea el QR y reproduce",waiting:"○ Esperando iniciar…",connecting:"Conectando…",connected_wait:"Conectado — esperando audio",running:"● Sonando — audio en tus auriculares",stopped_hint:"Detenido. Pulsa reproducir.",locked_hint:"! ¿Pantalla bloqueada? Cambia a Fondo",back_hint:"Bienvenido — repite si no hay sonido",conn_lost:"! Desconectado — revisa Wi-Fi y código",err_conn:"! Sin conexión — se requiere el mismo Wi-Fi",err_code:"Introduce el código de 6 dígitos",err_retry:"No se pudo iniciar — reintenta",bg_now:"● Fondo activo — puedes bloquear la pantalla",fast_ready:"Conectado — reproduce algo en el PC",mode_fast:"Directo",mode_fast_d:"Retardo ~0,1 s",mode_bg:"Fondo",mode_bg_d:"Funciona bloqueado",start:"▶ Reproducir",stop:"■ Detener",volume:"Volumen",latency:"Retardo",state:"Estado",connected:"Sonando",disconnected:"Desconectado",bg_tag:"Fondo",connecting2:"Conectando…",sec:" s",tip_bt:"No se necesita permiso de Bluetooth.",tip_vol:"Sube el volumen del PC, teléfono y página.",tip_net:"Si se entrecorta: acércate al rúter, usa Wi-Fi 5 GHz y pausa las descargas.",net:"Red",pctitle:"Panel del equipo",pcsub:"Escanea desde el teléfono — mismo Wi-Fi",pin_cap:"Código (nuevo cada vez)",clients:"Teléfonos conectados",tip_fw:"Si el firewall pregunta, permite solo redes privadas.",appoff:"Inicia primero la aplicación"}
 };
 let lang=document.documentElement.lang||'en';
 if(!S[lang])lang='en';
@@ -242,7 +243,7 @@ if(params.get('code')){$('code').value=params.get('code');}
 const isPC=['localhost','127.0.0.1'].includes(location.hostname);
 if(isPC){$('playerBox').style.display='none';$('pcBox').style.display='block';loadPC();}
 const WS_PORT=__WS_PORT__;
-let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null;
+let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null,lastArr=0,jitA=0;
 function setMode(m){mode=m;stopAll();
  $('mFast').classList.toggle('sel',m==='fast');
  $('mBg').classList.toggle('sel',m==='bg');
@@ -295,8 +296,15 @@ $('btnStart').onclick=async()=>{
     for(let i=0;i<frames;i++){d[i]=bytes[i*helloCh+c]/32768;}
    }
    const src=ctx.createBufferSource();src.buffer=buf;src.connect(gain);
-   if(nextTime<ctx.currentTime)nextTime=ctx.currentTime+0.03;
+   const nowA=ctx.currentTime;
+   const buffered=nextTime-nowA;
+   if(buffered<0)nextTime=nowA+0.09;
+   else if(buffered>0.6)nextTime=nowA+0.18;
    src.start(nextTime);nextTime+=buf.duration;
+   const tA=performance.now();
+   if(lastArr){const dev=Math.abs((tA-lastArr)-20);jitA=jitA*0.9+dev*0.1;}
+   lastArr=tA;
+   $('netq').textContent=jitA.toFixed(0)+' ms';
    chunkCount++;
    const lat=((nextTime-ctx.currentTime)*1000)|0;
    $('lat').textContent=(lat/1000).toFixed(2)+t('sec');
@@ -308,7 +316,7 @@ function startCtx(){
  if(ctx)try{ctx.close()}catch(e){}
  ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:helloRate,latencyHint:'interactive'});
  gain=ctx.createGain();gain.gain.value=$('vol').value/100;gain.connect(ctx.destination);
- ctx.resume();nextTime=ctx.currentTime+0.06;running=true;chunkCount=0;keepAwake();
+ ctx.resume();nextTime=ctx.currentTime+0.06;running=true;chunkCount=0;lastArr=0;jitA=0;keepAwake();
  $('btnStart').disabled=true;setStatus(t('fast_ready'),'ok');
 }
 function stopAll(){running=false;try{ws&&ws.close()}catch(e){}ws=null;try{ctx&&ctx.close()}catch(e){}ctx=null;
@@ -514,7 +522,7 @@ def capture_loop():
         audio_conf["rate"] = 48000; audio_conf["ok"] = True
         t = 0
         while not stop_flag.is_set():
-            frames = 480
+            frames = 960
             buf = bytearray()
             for i in range(frames):
                 v = int(12000 * math.sin(2 * math.pi * 440 * (t + i) / 48000))
@@ -560,11 +568,11 @@ def capture_loop():
         print("[audio] Play anything on the PC — after pressing play on the phone you will hear it.")
         stream = p.open(format=pyaudio.paInt16, channels=ch, rate=rate,
                         input=True, input_device_index=dev["index"],
-                        frames_per_buffer=480)
+                        frames_per_buffer=960)
         try:
             while not stop_flag.is_set():
                 try:
-                    data = stream.read(480, exception_on_overflow=False)
+                    data = stream.read(960, exception_on_overflow=False)
                 except Exception:
                     continue
                 if MONO and ch == 2:
@@ -605,7 +613,7 @@ def push_to_clients(data: bytes):
     # Drop stale chunks on congestion (prevents delay buildup)
     for q in targets:
         try:
-            while q.qsize() > 4:
+            while q.qsize() > 10:
                 try:
                     q.get_nowait()
                 except Exception:
@@ -642,7 +650,7 @@ async def ws_handler(ws, path=None):
             pass
         print(f"[security] Wrong-code attempt from {ip}")
         return
-    q: asyncio.Queue = asyncio.Queue(maxsize=6)
+    q: asyncio.Queue = asyncio.Queue(maxsize=12)
     with clients_queues_lock:
         clients_queues.add(q)
     with connected_lock:
