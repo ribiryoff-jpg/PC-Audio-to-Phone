@@ -3,3 +3,5 @@ websockets
 qrcode
 pillow
 lameenc
+aiortc
+numpy

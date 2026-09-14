@@ -16,8 +16,9 @@ earphones. Everything stays inside your home network.
 
 ## Features
 
-- **Two listening modes**: Instant (~0.1s delay, screen-on) and Background
-  (MP3 stream that keeps playing with the screen locked, 2–5s delay)
+- **Three listening modes**: Instant (~0.1s, screen-on), **WebRTC/Opus
+  (recommended: lowest delay, rides through jitter like WhatsApp calls)**,
+  and Background MP3 (keeps playing with the screen locked, 2–5s delay)
 - **Private by design**: LAN-only, fresh 6-digit PIN every run, temporary ban
   after repeated wrong attempts
 - **Monochrome UI**: black/gray/white only, with dark and light themes
@@ -72,9 +73,12 @@ Options: `python server.py --test` (network test tone), `--mono`
 ## How it works
 
 - The server captures the default playback device via WASAPI loopback
-  (`pyaudiowpatch`) in 10ms chunks.
+  (`pyaudiowpatch`) in 20ms chunks.
 - **Instant mode**: raw PCM over WebSocket, scheduled with the Web Audio API
-  for minimal delay.
+  behind an adaptive jitter buffer (80ms base, grows only on underruns).
+- **WebRTC mode**: the same audio as Opus over UDP (`aiortc`) straight into
+  the browser's native voice pipeline — jitter buffer and loss concealment
+  included, same family of tech as WhatsApp/Discord calls.
 - **Background mode**: the same audio is encoded to MP3 (`lameenc`) and
   served as a radio-style HTTP stream that a native `<audio>` element plays —
   which is why it survives screen lock, with lock-screen controls.

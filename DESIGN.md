@@ -26,7 +26,7 @@ together). Rhythm: 8px base scale (8/12/16/24).
 ## Components
 
 - Segmented control: theme (dark/light) and language (AR/EN/FR/ES).
-- Mode cards: Instant vs Background, each with name + delay + one-line note.
+- Mode cards: Instant vs WebRTC vs Background, each with name + delay + one-line note.
 - Steps: one real numbered sequence (1 Wi-Fi, 2 pair buds, 3 code + play).
 - Status row: icon glyph (● ○ ✓ !) + text; never color alone.
 - Big Play/Stop buttons (phone ≥56px tall); desktop Start/Stop + Copy link.

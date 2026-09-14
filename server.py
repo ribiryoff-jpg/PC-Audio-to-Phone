@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import json
 import math
+import queue
 import random
 import secrets
 import socket
@@ -18,6 +19,7 @@ import sys
 import threading
 import time
 from collections import defaultdict
+from fractions import Fraction
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -150,9 +152,9 @@ h1{font-size:21px;margin:0 0 4px;text-wrap:balance}
 .status.ok{color:var(--ok);border-color:var(--ok)}
 .status.err{color:var(--err);border-color:var(--err)}
 #code{font-size:24px;text-align:center;letter-spacing:8px;text-indent:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);padding:12px;width:100%;margin:4px 0 8px;font-family:ui-monospace,Consolas,monospace}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
-.mode{border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:12px;min-height:72px;cursor:pointer;text-align:start;font-family:inherit}
-.mode b{display:block;font-size:14px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.mode{border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 8px;min-height:76px;cursor:pointer;text-align:start;font-family:inherit}
+.mode b{display:block;font-size:13px}
 .mode span{font-size:12px;color:var(--muted)}
 .mode.sel{border-color:var(--text);background:var(--raised)}
 .mode.sel b::after{content:" ✓"}
@@ -190,6 +192,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--text);outline-o
 <input id="code" inputmode="numeric" maxlength="6" placeholder="••••••" aria-label="code">
 <div class="modes">
 <button id="mFast" class="mode" onclick="setMode('fast')"><b data-i="mode_fast"></b><span data-i="mode_fast_d"></span></button>
+<button id="mRtc" class="mode" onclick="setMode('rtc')"><b data-i="mode_rtc"></b><span data-i="mode_rtc_d"></span></button>
 <button id="mBg" class="mode" onclick="setMode('bg')"><b data-i="mode_bg"></b><span data-i="mode_bg_d"></span></button>
 </div>
 <button id="btnStart"></button>
@@ -217,10 +220,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--text);outline-o
 <script>
 const $=id=>document.getElementById(id);
 const S={
-ar:{title:"صوت الحاسوب إلى الهاتف",subtitle:"استمع لصوت حاسوبك من سماعات البلوتوث المربوطة بهاتفك.",step1t:"نفس الواي فاي",step1d:"الهاتف والحاسوب على نفس الشبكة",step2t:"اربط السماعات",step2d:"البلوتوث مربوط بالهاتف",step3t:"أدخل الرمز وشغّل",step3d:"امسح QR ثم اضغط تشغيل",waiting:"○ بانتظار التشغيل…",connecting:"…جارٍ الاتصال",connected_wait:"متصل — بانتظار الصوت",running:"● يعمل الآن — الصوت في سماعاتك",stopped_hint:"متوقف. اضغط تشغيل للعودة.",locked_hint:"! الشاشة مقفلة؟ بدّل إلى وضع الخلفية",back_hint:"عُدت — إن توقف الصوت أعد التشغيل",conn_lost:"! انقطع الاتصال — تحقق من الواي فاي والرمز",err_conn:"! تعذر الاتصال — تأكد من نفس شبكة الواي فاي",err_code:"أدخل الرمز المكوّن من 6 أرقام",err_retry:"تعذر التشغيل — حاول مجدداً",bg_now:"● الخلفية تعمل — يمكنك قفل الشاشة",fast_ready:"تم الاتصال — شغّل أي صوت في الحاسوب",mode_fast:"مباشر",mode_fast_d:"تأخير ~0.1 ثانية",mode_bg:"خلفية",mode_bg_d:"يعمل مع قفل الشاشة",start:"▶ تشغيل الصوت",stop:"■ إيقاف",volume:"مستوى الصوت",latency:"التأخير",state:"الحالة",connected:"يعمل",disconnected:"غير متصل",bg_tag:"خلفية",connecting2:"يتصل…",sec:" ث",tip_bt:"لا حاجة لصلاحية بلوتوث في المتصفح.",tip_vol:"ارفع صوت الحاسوب والهاتف والصفحة معاً.",tip_net:"عند التقطيع: قرّب الهاتف من الراوتر واستخدم شبكة 5GHz وأوقف التحميلات.",net:"الشبكة",pctitle:"لوحة الحاسوب",pcsub:"امسح الرمز من الهاتف — نفس شبكة الواي فاي",pin_cap:"رمز الدخول (يتغير كل تشغيل)",clients:"هواتف متصلة الآن",tip_fw:"عند طلب الجدار الناري اختر الشبكات الخاصة فقط.",appoff:"شغّل التطبيق أولاً"},
-en:{title:"PC Audio to Phone",subtitle:"Hear your PC on the Bluetooth earphones paired with your phone.",step1t:"Same Wi-Fi",step1d:"Phone and PC on the same network",step2t:"Pair the buds",step2d:"Bluetooth paired with the phone",step3t:"Enter code & play",step3d:"Scan the QR, then press play",waiting:"○ Waiting to start…",connecting:"Connecting…",connected_wait:"Connected — waiting for audio",running:"● Playing — audio on your earphones",stopped_hint:"Stopped. Press play to resume.",locked_hint:"! Screen locked? Switch to Background mode",back_hint:"Welcome back — replay if silent",conn_lost:"! Disconnected — check Wi-Fi and code",err_conn:"! Can't connect — same Wi-Fi required",err_code:"Enter the 6-digit code",err_retry:"Couldn't start — try again",bg_now:"● Background on — you can lock the screen",fast_ready:"Connected — play anything on the PC",mode_fast:"Instant",mode_fast_d:"~0.1s delay",mode_bg:"Background",mode_bg_d:"Works with locked screen",start:"▶ Play audio",stop:"■ Stop",volume:"Volume",latency:"Delay",state:"Status",connected:"Playing",disconnected:"Offline",bg_tag:"Background",connecting2:"Connecting…",sec:" s",tip_bt:"No Bluetooth permission needed in the browser.",tip_vol:"Turn up PC, phone and page volume together.",tip_net:"If it stutters: move closer to the router, use 5GHz Wi-Fi, pause downloads.",net:"Network",pctitle:"Computer panel",pcsub:"Scan the code from your phone — same Wi-Fi",pin_cap:"Access code (new each run)",clients:"Phones connected",tip_fw:"If the firewall asks, allow private networks only.",appoff:"Start the app first"},
-fr:{title:"Audio du PC",subtitle:"Écoutez votre PC sur les écouteurs associés à votre téléphone.",step1t:"Même Wi-Fi",step1d:"Téléphone et PC sur le même réseau",step2t:"Associez les écouteurs",step2d:"Bluetooth associé au téléphone",step3t:"Code et lecture",step3d:"Scannez le QR, puis lecture",waiting:"○ En attente…",connecting:"Connexion…",connected_wait:"Connecté — en attente d'audio",running:"● Lecture — audio sur vos écouteurs",stopped_hint:"Arrêté. Appuyez sur lecture.",locked_hint:"! Écran verrouillé ? Passez en Arrière-plan",back_hint:"Bon retour — relancez si silencieux",conn_lost:"! Déconnecté — vérifiez Wi-Fi et code",err_conn:"! Connexion impossible — même Wi-Fi requis",err_code:"Saisissez le code à 6 chiffres",err_retry:"Échec — réessayez",bg_now:"● Arrière-plan actif — verrouillez l'écran",fast_ready:"Connecté — lancez un son sur le PC",mode_fast:"Direct",mode_fast_d:"Retard ~0,1 s",mode_bg:"Arrière-plan",mode_bg_d:"Écran verrouillé OK",start:"▶ Lecture",stop:"■ Arrêter",volume:"Volume",latency:"Retard",state:"État",connected:"Lecture",disconnected:"Hors ligne",bg_tag:"Arrière-plan",connecting2:"Connexion…",sec:" s",tip_bt:"Aucune autorisation Bluetooth requise.",tip_vol:"Montez PC, téléphone et page ensemble.",tip_net:"En cas de saccades : rapprochez le téléphone du routeur, Wi-Fi 5 GHz, pausez les téléchargements.",net:"Réseau",pctitle:"Panneau de l'ordinateur",pcsub:"Scannez depuis le téléphone — même Wi-Fi",pin_cap:"Code d'accès (nouveau à chaque fois)",clients:"Téléphones connectés",tip_fw:"Si le pare-feu demande, autorisez les réseaux privés.",appoff:"Démarrez d'abord l'application"},
-es:{title:"Audio del PC",subtitle:"Escucha tu PC en los auriculares vinculados a tu teléfono.",step1t:"Mismo Wi-Fi",step1d:"Teléfono y PC en la misma red",step2t:"Vincula los auriculares",step2d:"Bluetooth vinculado al teléfono",step3t:"Código y reproducir",step3d:"Escanea el QR y reproduce",waiting:"○ Esperando iniciar…",connecting:"Conectando…",connected_wait:"Conectado — esperando audio",running:"● Sonando — audio en tus auriculares",stopped_hint:"Detenido. Pulsa reproducir.",locked_hint:"! ¿Pantalla bloqueada? Cambia a Fondo",back_hint:"Bienvenido — repite si no hay sonido",conn_lost:"! Desconectado — revisa Wi-Fi y código",err_conn:"! Sin conexión — se requiere el mismo Wi-Fi",err_code:"Introduce el código de 6 dígitos",err_retry:"No se pudo iniciar — reintenta",bg_now:"● Fondo activo — puedes bloquear la pantalla",fast_ready:"Conectado — reproduce algo en el PC",mode_fast:"Directo",mode_fast_d:"Retardo ~0,1 s",mode_bg:"Fondo",mode_bg_d:"Funciona bloqueado",start:"▶ Reproducir",stop:"■ Detener",volume:"Volumen",latency:"Retardo",state:"Estado",connected:"Sonando",disconnected:"Desconectado",bg_tag:"Fondo",connecting2:"Conectando…",sec:" s",tip_bt:"No se necesita permiso de Bluetooth.",tip_vol:"Sube el volumen del PC, teléfono y página.",tip_net:"Si se entrecorta: acércate al rúter, usa Wi-Fi 5 GHz y pausa las descargas.",net:"Red",pctitle:"Panel del equipo",pcsub:"Escanea desde el teléfono — mismo Wi-Fi",pin_cap:"Código (nuevo cada vez)",clients:"Teléfonos conectados",tip_fw:"Si el firewall pregunta, permite solo redes privadas.",appoff:"Inicia primero la aplicación"}
+ar:{title:"صوت الحاسوب إلى الهاتف",subtitle:"استمع لصوت حاسوبك من سماعات البلوتوث المربوطة بهاتفك.",step1t:"نفس الواي فاي",step1d:"الهاتف والحاسوب على نفس الشبكة",step2t:"اربط السماعات",step2d:"البلوتوث مربوط بالهاتف",step3t:"أدخل الرمز وشغّل",step3d:"امسح QR ثم اضغط تشغيل",waiting:"○ بانتظار التشغيل…",connecting:"…جارٍ الاتصال",connected_wait:"متصل — بانتظار الصوت",running:"● يعمل الآن — الصوت في سماعاتك",stopped_hint:"متوقف. اضغط تشغيل للعودة.",locked_hint:"! الشاشة مقفلة؟ بدّل إلى وضع الخلفية",back_hint:"عُدت — إن توقف الصوت أعد التشغيل",conn_lost:"! انقطع الاتصال — تحقق من الواي فاي والرمز",err_conn:"! تعذر الاتصال — تأكد من نفس شبكة الواي فاي",err_code:"أدخل الرمز المكوّن من 6 أرقام",err_retry:"تعذر التشغيل — حاول مجدداً",bg_now:"● الخلفية تعمل — يمكنك قفل الشاشة",fast_ready:"تم الاتصال — شغّل أي صوت في الحاسوب",mode_fast:"مباشر",mode_fast_d:"تأخير ~0.1 ثانية",mode_rtc:"WebRTC",mode_rtc_d:"الأسرع والأثبت",mode_bg:"خلفية",mode_bg_d:"يعمل مع قفل الشاشة",start:"▶ تشغيل الصوت",stop:"■ إيقاف",volume:"مستوى الصوت",latency:"التأخير",state:"الحالة",connected:"يعمل",disconnected:"غير متصل",bg_tag:"خلفية",connecting2:"يتصل…",sec:" ث",tip_bt:"لا حاجة لصلاحية بلوتوث في المتصفح.",tip_vol:"ارفع صوت الحاسوب والهاتف والصفحة معاً.",tip_net:"عند التقطيع: قرّب الهاتف من الراوتر واستخدم شبكة 5GHz وأوقف التحميلات.",net:"الشبكة",pctitle:"لوحة الحاسوب",pcsub:"امسح الرمز من الهاتف — نفس شبكة الواي فاي",pin_cap:"رمز الدخول (يتغير كل تشغيل)",clients:"هواتف متصلة الآن",tip_fw:"عند طلب الجدار الناري اختر الشبكات الخاصة فقط.",appoff:"شغّل التطبيق أولاً"},
+en:{title:"PC Audio to Phone",subtitle:"Hear your PC on the Bluetooth earphones paired with your phone.",step1t:"Same Wi-Fi",step1d:"Phone and PC on the same network",step2t:"Pair the buds",step2d:"Bluetooth paired with the phone",step3t:"Enter code & play",step3d:"Scan the QR, then press play",waiting:"○ Waiting to start…",connecting:"Connecting…",connected_wait:"Connected — waiting for audio",running:"● Playing — audio on your earphones",stopped_hint:"Stopped. Press play to resume.",locked_hint:"! Screen locked? Switch to Background mode",back_hint:"Welcome back — replay if silent",conn_lost:"! Disconnected — check Wi-Fi and code",err_conn:"! Can't connect — same Wi-Fi required",err_code:"Enter the 6-digit code",err_retry:"Couldn't start — try again",bg_now:"● Background on — you can lock the screen",fast_ready:"Connected — play anything on the PC",mode_fast:"Instant",mode_fast_d:"~0.1s delay",mode_rtc:"WebRTC",mode_rtc_d:"Fastest and steadiest",mode_bg:"Background",mode_bg_d:"Works with locked screen",start:"▶ Play audio",stop:"■ Stop",volume:"Volume",latency:"Delay",state:"Status",connected:"Playing",disconnected:"Offline",bg_tag:"Background",connecting2:"Connecting…",sec:" s",tip_bt:"No Bluetooth permission needed in the browser.",tip_vol:"Turn up PC, phone and page volume together.",tip_net:"If it stutters: move closer to the router, use 5GHz Wi-Fi, pause downloads.",net:"Network",pctitle:"Computer panel",pcsub:"Scan the code from your phone — same Wi-Fi",pin_cap:"Access code (new each run)",clients:"Phones connected",tip_fw:"If the firewall asks, allow private networks only.",appoff:"Start the app first"},
+fr:{title:"Audio du PC",subtitle:"Écoutez votre PC sur les écouteurs associés à votre téléphone.",step1t:"Même Wi-Fi",step1d:"Téléphone et PC sur le même réseau",step2t:"Associez les écouteurs",step2d:"Bluetooth associé au téléphone",step3t:"Code et lecture",step3d:"Scannez le QR, puis lecture",waiting:"○ En attente…",connecting:"Connexion…",connected_wait:"Connecté — en attente d'audio",running:"● Lecture — audio sur vos écouteurs",stopped_hint:"Arrêté. Appuyez sur lecture.",locked_hint:"! Écran verrouillé ? Passez en Arrière-plan",back_hint:"Bon retour — relancez si silencieux",conn_lost:"! Déconnecté — vérifiez Wi-Fi et code",err_conn:"! Connexion impossible — même Wi-Fi requis",err_code:"Saisissez le code à 6 chiffres",err_retry:"Échec — réessayez",bg_now:"● Arrière-plan actif — verrouillez l'écran",fast_ready:"Connecté — lancez un son sur le PC",mode_fast:"Direct",mode_fast_d:"Retard ~0,1 s",mode_rtc:"WebRTC",mode_rtc_d:"Le plus rapide et stable",mode_bg:"Arrière-plan",mode_bg_d:"Écran verrouillé OK",start:"▶ Lecture",stop:"■ Arrêter",volume:"Volume",latency:"Retard",state:"État",connected:"Lecture",disconnected:"Hors ligne",bg_tag:"Arrière-plan",connecting2:"Connexion…",sec:" s",tip_bt:"Aucune autorisation Bluetooth requise.",tip_vol:"Montez PC, téléphone et page ensemble.",tip_net:"En cas de saccades : rapprochez le téléphone du routeur, Wi-Fi 5 GHz, pausez les téléchargements.",net:"Réseau",pctitle:"Panneau de l'ordinateur",pcsub:"Scannez depuis le téléphone — même Wi-Fi",pin_cap:"Code d'accès (nouveau à chaque fois)",clients:"Téléphones connectés",tip_fw:"Si le pare-feu demande, autorisez les réseaux privés.",appoff:"Démarrez d'abord l'application"},
+es:{title:"Audio del PC",subtitle:"Escucha tu PC en los auriculares vinculados a tu teléfono.",step1t:"Mismo Wi-Fi",step1d:"Teléfono y PC en la misma red",step2t:"Vincula los auriculares",step2d:"Bluetooth vinculado al teléfono",step3t:"Código y reproducir",step3d:"Escanea el QR y reproduce",waiting:"○ Esperando iniciar…",connecting:"Conectando…",connected_wait:"Conectado — esperando audio",running:"● Sonando — audio en tus auriculares",stopped_hint:"Detenido. Pulsa reproducir.",locked_hint:"! ¿Pantalla bloqueada? Cambia a Fondo",back_hint:"Bienvenido — repite si no hay sonido",conn_lost:"! Desconectado — revisa Wi-Fi y código",err_conn:"! Sin conexión — se requiere el mismo Wi-Fi",err_code:"Introduce el código de 6 dígitos",err_retry:"No se pudo iniciar — reintenta",bg_now:"● Fondo activo — puedes bloquear la pantalla",fast_ready:"Conectado — reproduce algo en el PC",mode_fast:"Directo",mode_fast_d:"Retardo ~0,1 s",mode_rtc:"WebRTC",mode_rtc_d:"Lo más rápido y estable",mode_bg:"Fondo",mode_bg_d:"Funciona bloqueado",start:"▶ Reproducir",stop:"■ Detener",volume:"Volumen",latency:"Retardo",state:"Estado",connected:"Sonando",disconnected:"Desconectado",bg_tag:"Fondo",connecting2:"Conectando…",sec:" s",tip_bt:"No se necesita permiso de Bluetooth.",tip_vol:"Sube el volumen del PC, teléfono y página.",tip_net:"Si se entrecorta: acércate al rúter, usa Wi-Fi 5 GHz y pausa las descargas.",net:"Red",pctitle:"Panel del equipo",pcsub:"Escanea desde el teléfono — mismo Wi-Fi",pin_cap:"Código (nuevo cada vez)",clients:"Teléfonos conectados",tip_fw:"Si el firewall pregunta, permite solo redes privadas.",appoff:"Inicia primero la aplicación"}
 };
 let lang=document.documentElement.lang||'en';
 if(!S[lang])lang='en';
@@ -243,13 +246,35 @@ if(params.get('code')){$('code').value=params.get('code');}
 const isPC=['localhost','127.0.0.1'].includes(location.hostname);
 if(isPC){$('playerBox').style.display='none';$('pcBox').style.display='block';loadPC();}
 const WS_PORT=__WS_PORT__;
-let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null,lastArr=0,jitA=0,jbTarget=0.08,underRuns=0,lastAdapt=0;
+let ws=null,ctx=null,gain=null,nextTime=0,running=false,helloRate=48000,helloCh=2,chunkCount=0,lastRx=0,mode='fast',wl=null,lastArr=0,jitA=0,jbTarget=0.08,underRuns=0,lastAdapt=0,pc=null;
 function setMode(m){mode=m;stopAll();
  $('mFast').classList.toggle('sel',m==='fast');
+ $('mRtc').classList.toggle('sel',m==='rtc');
  $('mBg').classList.toggle('sel',m==='bg');
- $('bgAudio').style.display=m==='bg'?'block':'none';
+ $('bgAudio').style.display=m==='fast'?'none':'block';
 }
 async function keepAwake(){try{if('wakeLock' in navigator){wl=await navigator.wakeLock.request('screen');}}catch(e){}}
+async function startRtc(code){
+ stopAll();
+ try{
+  setStatus(t('connecting'),'');$('st').textContent=t('connecting2');
+  pc=new RTCPeerConnection();window.__pc=pc;
+  pc.ontrack=(ev)=>{const a=$('bgAudio');try{a.srcObject=ev.streams[0];a.play().catch(()=>{});}catch(e){}};
+  pc.addTransceiver('audio',{direction:'recvonly'});
+  const offer=await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await new Promise((res,rej)=>{const to=setTimeout(()=>rej(new Error('ice')),8000);
+   if(pc.iceGatheringState==='complete'){clearTimeout(to);res();}
+   else pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete'){clearTimeout(to);res();}};});
+  const r=await fetch('http://'+location.host+'/rtc/offer?code='+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:pc.localDescription.sdp,type:pc.localDescription.type})});
+  if(!r.ok)throw new Error('offer rejected '+r.status);
+  const ans=await r.json();
+  await pc.setRemoteDescription(ans);
+  running=true;chunkCount=0;$('btnStart').disabled=true;$('st').textContent=t('connected');
+  setStatus(t('running'),'ok');keepAwake();
+  try{if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:t('title'),artist:'PC-Phone-Audio',album:'live'});}}catch(e){}
+ }catch(e){setStatus(t('err_retry'),'err');}
+}
 function startBg(code){
  stopAll();
  const a=$('bgAudio');a.src='http://'+location.host+'/stream.mp3?code='+code;
@@ -274,6 +299,7 @@ $('btnStart').onclick=async()=>{
  let code=$('code').value.trim();
  if(!/^[0-9]{6}$/.test(code)){setStatus(t('err_code'),'err');return;}
  if(mode==='bg'){startBg(code);return;}
+ if(mode==='rtc'){startRtc(code);return;}
  try{
   setStatus(t('connecting'),'');$('st').textContent=t('connecting2');
   ws=new WebSocket('ws://'+location.hostname+':'+WS_PORT+'/ws?code='+code);
@@ -321,7 +347,8 @@ function startCtx(){
  $('btnStart').disabled=true;setStatus(t('fast_ready'),'ok');
 }
 function stopAll(){running=false;try{ws&&ws.close()}catch(e){}ws=null;try{ctx&&ctx.close()}catch(e){}ctx=null;
- try{const a=$('bgAudio');a.pause();a.removeAttribute('src');a.load();}catch(e){}
+ try{pc&&pc.close()}catch(e){}pc=null;try{window.__pc=null;}catch(e){}
+ try{const a=$('bgAudio');a.pause();a.removeAttribute('src');try{a.srcObject=null;}catch(e){}a.load();}catch(e){}
  $('btnStart').disabled=false;$('st').textContent=t('disconnected');$('lat').textContent='—';}
 $('btnStop').onclick=()=>{stopAll();setStatus(t('stopped_hint'),'');};
 setTheme(document.documentElement.dataset.theme||'dark');
@@ -396,6 +423,36 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/health":
             return self._send(b"ok", "text/plain")
         return self._send(HTML_TEMPLATE.encode("utf-8"))
+
+    def do_POST(self):
+        u = urlparse(self.path)
+        if u.path == "/rtc/offer":
+            return self._serve_offer(u)
+        return self._send(b"not found", "text/plain", 404)
+
+    def _serve_offer(self, u):
+        code = (parse_qs(u.query).get("code", [""])[0])
+        if not check_code(code):
+            return self._send(b"bad code", "text/plain", 403)
+        if not RTC_AVAILABLE:
+            return self._send(b"webrtc unavailable", "text/plain", 501)
+        if main_loop is None:
+            return self._send(b"server starting", "text/plain", 503)
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except Exception:
+            length = 0
+        if length <= 0 or length > 65536:
+            return self._send(b"bad offer", "text/plain", 400)
+        try:
+            params = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not params.get("sdp") or not params.get("type"):
+                return self._send(b"bad offer", "text/plain", 400)
+            ans = asyncio.run_coroutine_threadsafe(rtc_offer(params), main_loop).result(timeout=15)
+        except Exception as e:
+            print(f"[error] RTC offer failed: {e}")
+            return self._send(b"offer failed", "text/plain", 500)
+        return self._send(json.dumps(ans).encode(), "application/json")
 
     def _serve_mp3(self, u):
         import queue as _q
@@ -518,6 +575,148 @@ def mp3_push(pcm: bytes, rate: int, ch: int):
     except Exception:
         pass
 
+# ---------- WebRTC voice path (Opus over UDP — lowest delay) ----------
+try:
+    from aiortc import MediaStreamTrack as _BaseAudioTrack
+    from aiortc import RTCConfiguration as _RTCConfiguration
+    from aiortc import RTCPeerConnection as _RTCPeerConnection
+    from aiortc import RTCSessionDescription as _RTCSessionDescription
+    RTC_AVAILABLE = True
+except ImportError:
+    RTC_AVAILABLE = False
+
+RTC_FRAME_SAMPLES = 960
+rtc_pcs = set()
+rtc_pcs_lock = threading.Lock()
+rtc_queues = set()
+rtc_queues_lock = threading.Lock()
+
+
+if RTC_AVAILABLE:
+    class BridgeAudioTrack(_BaseAudioTrack):
+        """Feeds captured PCM to aiortc as 48kHz stereo Opus source frames."""
+        kind = "audio"
+
+        def __init__(self, pcm_queue):
+            super().__init__()
+            self._queue = pcm_queue
+            self._timestamp = 0
+            self._resampler = None
+
+        def _silence(self):
+            import av
+            frame = av.AudioFrame(format="s16", layout="stereo", samples=RTC_FRAME_SAMPLES)
+            frame.sample_rate = 48000
+            frame.planes[0].update(b"\x00" * (RTC_FRAME_SAMPLES * 2 * 2))
+            frame.pts = self._timestamp
+            frame.time_base = Fraction(1, 48000)
+            self._timestamp += RTC_FRAME_SAMPLES
+            return frame
+
+        async def recv(self):
+            import av
+            try:
+                return self._next_frame(av)
+            except Exception:
+                try:
+                    return self._silence()
+                except Exception:
+                    await asyncio.sleep(0.02)
+                    return self._silence()
+
+        def _next_frame(self, av):
+            try:
+                pcm = self._queue.get_nowait()
+            except Exception:
+                pcm = None
+            rate = audio_conf.get("rate", 48000)
+            ch = audio_conf.get("channels", CHANNELS)
+            if pcm is None:
+                return self._silence()
+            need = RTC_FRAME_SAMPLES * ch * 2
+            if len(pcm) < need:
+                pcm = pcm + b"\x00" * (need - len(pcm))
+            else:
+                pcm = pcm[:need]
+            if rate == 48000 and ch == 2:
+                frame = av.AudioFrame(format="s16", layout="stereo", samples=RTC_FRAME_SAMPLES)
+                frame.sample_rate = 48000
+                frame.planes[0].update(pcm)
+            else:
+                if self._resampler is None:
+                    self._resampler = av.AudioResampler(format="s16", layout="stereo", rate=48000)
+                src = av.AudioFrame(format="s16",
+                                    layout="mono" if ch == 1 else "stereo",
+                                    samples=len(pcm) // (ch * 2))
+                src.sample_rate = rate
+                src.planes[0].update(pcm)
+                out = self._resampler.resample(src)
+                if not out:
+                    return self._silence()
+                frame = out[-1]
+            frame.pts = self._timestamp
+            frame.time_base = Fraction(1, 48000)
+            self._timestamp += RTC_FRAME_SAMPLES
+            return frame
+
+
+def rtc_push(pcm: bytes):
+    """Share a captured chunk with all WebRTC tracks (drops when idle)."""
+    if not RTC_AVAILABLE or not pcm:
+        return
+    with rtc_queues_lock:
+        if not rtc_queues:
+            return
+        targets = list(rtc_queues)
+    for q in targets:
+        try:
+            q.put_nowait(pcm)
+        except Exception:
+            pass
+        try:
+            while q.qsize() > 10:
+                try:
+                    q.get_nowait()
+                except Exception:
+                    break
+        except Exception:
+            pass
+
+
+async def rtc_offer(params):
+    """Complete one WebRTC offer/answer handshake (runs on the WS loop)."""
+    config = _RTCConfiguration(iceServers=[])
+    pc = _RTCPeerConnection(configuration=config)
+    with rtc_pcs_lock:
+        rtc_pcs.add(pc)
+    q = queue.Queue(maxsize=12)
+    with rtc_queues_lock:
+        rtc_queues.add(q)
+    track = BridgeAudioTrack(q)
+    pc.addTrack(track)
+
+    @pc.on("connectionstatechange")
+    async def _on_state():
+        if pc.connectionState in ("failed", "closed"):
+            try:
+                await pc.close()
+            except Exception:
+                pass
+            with rtc_pcs_lock:
+                rtc_pcs.discard(pc)
+            with rtc_queues_lock:
+                rtc_queues.discard(q)
+
+    await pc.setRemoteDescription(_RTCSessionDescription(sdp=params["sdp"], type=params["type"]))
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+    for _ in range(100):
+        if pc.iceGatheringState == "complete":
+            break
+        await asyncio.sleep(0.05)
+    return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+
+
 def capture_loop():
     """Capture whatever is playing on the PC and send it to all connected phones."""
     global SAMPLE_RATE
@@ -538,6 +737,7 @@ def capture_loop():
             data = bytes(buf)
             push_to_clients(data)
             mp3_push(data, 48000, CHANNELS)
+            rtc_push(data)
             time.sleep(frames / 48000)
         return
     try:
@@ -594,6 +794,7 @@ def capture_loop():
                     data = struct.pack(f"<{n}h", *mono)
                 push_to_clients(data)
                 mp3_push(data, rate, out_ch)
+                rtc_push(data)
         finally:
             try:
                 stream.stop_stream()
